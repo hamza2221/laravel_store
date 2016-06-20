@@ -108,9 +108,9 @@ class ProductsController extends Controller {
                 $productImages = new ProductImage;
                 $productImages->name = $count . $unique_time . '.' . $i->getClientOriginalExtension();
                 $productImages->product_id = $productId;
-                $productImages->path = url('public/products/' . $count . $unique_time . '.' . $i->getClientOriginalExtension());
-                $productImages->path_thumb = url('public/products/' . $count . $unique_time . '_thumb.' . $i->getClientOriginalExtension());
-                $productImages->path_medium = url('public/products/' . $count . $unique_time . '_medium.' . $i->getClientOriginalExtension());
+                $productImages->path = 'public/products/' . $count . $unique_time . '.' . $i->getClientOriginalExtension();
+                $productImages->path_thumb = 'public/products/' . $count . $unique_time . '_thumb.' . $i->getClientOriginalExtension();
+                $productImages->path_medium = 'public/products/' . $count . $unique_time . '_medium.' . $i->getClientOriginalExtension();
                 $productImages->save();
             }
         }
@@ -207,19 +207,18 @@ class ProductsController extends Controller {
 
     function deleteProductImage($imageId, $productId) {
         $fileName = ProductImage::find($imageId);
-        if (File::exists($fileName->path)) {
-            File::delete($fileName->path);
-            echo "found";
-        } else {
-            echo "not found";
-        }
-        return $fileName->path;
-
-
-        File::Delete($fileName->path_thumb);
+        
+        if (File::exists('public/products/'.$fileName->name)){ 
+            unlink($fileName->path);
+             unlink($fileName->path_thumb);
+              unlink($fileName->path_medium);
+              File::Delete($fileName->path_thumb);
         File::Delete($fileName->path_medium);
         ProductImage::find($imageId)->delete();
         Session::flash('danger', 'The produuct image was deleted successfully');
+        }else{
+            Session::flash('danger', 'The produuct image was NOT deleted');
+        }
         return redirect('admin/products/productImages/' . $productId);
     }
 
