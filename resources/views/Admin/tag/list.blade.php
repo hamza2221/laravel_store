@@ -30,7 +30,7 @@
                         <ol class='list-group simple_with_animation vertical'>
                              @foreach($tags as $i)
 
-                            <li title="{{$i->id}}" class="list-group-item">
+                            <li id="{{$i->id}}" class="list-group-item text-capitalize">
                             <label>
                             <input name="id[]" value="{{$i->id}}" type="checkbox" />
                             {{$i->name}}
@@ -112,13 +112,14 @@
     
     var adjustment;
 
-$("ol.simple_with_animation").sortable({
+$(".simple_with_animation").sortable({
   group: 'simple_with_animation',
   pullPlaceholder: true,
    handle: '.move',
   // animation on drop
+  
   onDrop: function  ($item, container, _super) {
-    var $clonedItem = $('<li/>').css({height: 0});
+    var $clonedItem = $('<i/>').css({height: 0});
     $item.before($clonedItem);
     $clonedItem.animate({'height': $item.height()});
 
@@ -126,8 +127,16 @@ $("ol.simple_with_animation").sortable({
       $clonedItem.detach();
       _super($item, container);
     });
-    var data = $(this).sortable('serialize');
-     console.log(data);     
+   
+     
+    var order = []; 
+
+        $('.simple_with_animation li').each( function(e) {
+            order[ $(this).attr('id') ] =  $(this).index()+1 ;
+        });
+      console.log(order);
+      $.get('tags/sort_tags', {odr:order});
+     
   },
   
 

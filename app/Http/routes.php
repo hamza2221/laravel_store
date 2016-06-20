@@ -72,9 +72,11 @@ Route::group(['middleware' => ['web']], function () {
 
 
     Route::group(['prefix' => 'admin/'], function() {
+        Route::get('tags/sort_tags', 'Admin\TagsController@sort_tags');
         Route::resource('tags', 'Admin\TagsController');
         Route::get('tags/{id}/delete', 'Admin\TagsController@delete');
         Route::post('tags/bulk_delete', 'Admin\TagsController@bulk_delete');
+
     });
 });
 

@@ -27,7 +27,7 @@ class TagsController extends Controller {
     }
 
     public function index() {
-        $tag = Tag::all();
+        $tag = Tag::orderby('sort_order','asc')->get();
         return view('Admin.tag.list')->withTags($tag);
     }
 
@@ -148,8 +148,16 @@ class TagsController extends Controller {
         }
     }
 
-    function product_tags(){
-            
+    function sort_tags(Request $request){
+            $orders=input::get('odr');
+            foreach ($orders as $id => $sort_order) {
+                if ($sort_order !="") {
+                    $tag = Tag::find($id);
+                    $tag->sort_order=$sort_order;
+                    $tag->save();
+                }
+            }
+            //echo "in sort function";
     }
 
 }
