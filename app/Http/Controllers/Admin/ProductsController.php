@@ -16,6 +16,7 @@ use Session;
 use Image;
 use File;
 use Validator;
+use Storage;
 
 class ProductsController extends Controller {
 
@@ -39,7 +40,7 @@ class ProductsController extends Controller {
      * @return \Illuminate\Http\Response
      */
     public function create() {
-        $data['categories'] = Category::select('ID', 'name')->get();
+        $data['categories'] = Category::where('parent_id','=',0)->get();
         $data['users'] = User::select('ID', 'name')->get();
         return view('Admin.product.new')->with('data', $data);
     }
@@ -52,7 +53,10 @@ class ProductsController extends Controller {
      */
     public function store(Request $request) {
         $validation=Validator::make($request->input(),array(
-                'name'=>'required|max:250',
+                'title'=>'required|max:250',
+                'description'=>'required',
+                'price'=>'required|numeric|min:1',
+                'quantity_available'=>'required|numeric|min:1',
                 
             ));
         if($validation->fails()){
@@ -81,6 +85,7 @@ class ProductsController extends Controller {
         //return view('admin.product.img_form')->withId($productId);
         $file = input::file('file');
         $productId = input::get('productId');
+        Storage::disk('product_images')->makeDirectory($productId,777, true);
         //$file_name=time().'.'.$file->getClientOriginalExtension();
         //$file->move('public/',$file_name);
         //return "name is".$file_name;
@@ -88,29 +93,32 @@ class ProductsController extends Controller {
         $unique_time = time();
         foreach ($file as $i) {
             $count++;
-            if ($i->move('public/products/', $count . $unique_time . '.' . $i->getClientOriginalExtension())) {
+            $filename=$count . $unique_time . '.' . $i->getClientOriginalExtension();
+            $move=Storage::disk('product_images')->put($productId."/".$filename, file_get_contents($i));
+        
+            if ($move) {
                 /**
                  * making thumbnail of 80x80
                  */
-                $img = Image::make('public/products/' . $count . $unique_time . '.' . $i->getClientOriginalExtension());
+                $img = Image::make("storage/product_images/$productId/$filename");
                 $img->resize(80, 80, function ($constraint) {
                     $constraint->aspectRatio();
-                })->save('public/products/' . $count . $unique_time . '_thumb.' . $i->getClientOriginalExtension(), 60);
+                })->save("storage/product_images/$productId/thumb_$filename", 60);
                 /**
                  * making medium size image
                  */
                 $img->resize(600, 480, function ($constraint) {
                     $constraint->aspectRatio();
-                })->save('public/products/' . $count . $unique_time . '_medium.' . $i->getClientOriginalExtension(), 60);
+                })->save("storage/product_images/$productId/medium_$filename", 60);
                 /**
                  * making thumbnail of 80x80
                  */
                 $productImages = new ProductImage;
                 $productImages->name = $count . $unique_time . '.' . $i->getClientOriginalExtension();
                 $productImages->product_id = $productId;
-                $productImages->path = 'public/products/' . $count . $unique_time . '.' . $i->getClientOriginalExtension();
-                $productImages->path_thumb = 'public/products/' . $count . $unique_time . '_thumb.' . $i->getClientOriginalExtension();
-                $productImages->path_medium = 'public/products/' . $count . $unique_time . '_medium.' . $i->getClientOriginalExtension();
+                $productImages->path = "storage/product_images/$productId/$filename";
+                $productImages->path_thumb = "storage/product_images/$productId/thumb_$filename";
+                $productImages->path_medium = "storage/product_images/$productId/medium_$filename";
                 $productImages->save();
             }
         }
@@ -136,7 +144,7 @@ class ProductsController extends Controller {
      */
     public function edit($id) {
         $data['product'] = Product::find($id);
-        $data['categories'] = Category::select('ID', 'name')->get();
+        $data['categories'] = Category::where('parent_id','=',0)->get();
         $data['users'] = User::select('ID', 'name')->get();
         return view('Admin.product.edit')->withData($data);
     }
@@ -149,6 +157,16 @@ class ProductsController extends Controller {
      * @return \Illuminate\Http\Response
      */
     public function update(Request $request, $id) {
+        $validation=Validator::make($request->input(),array(
+                'title'=>'required|max:250',
+                'description'=>'required',
+                'price'=>'required|numeric|min:1',
+                'quantity_available'=>'required|numeric|min:1',
+                
+            ));
+        if($validation->fails()){
+            return redirect("admin/products/$id/edit")->withErrors($validation)->withInput();
+        }
         $product = Product::find($id);
         $product->title = $request->title;
         $product->description = $request->description;
@@ -207,18 +225,19 @@ class ProductsController extends Controller {
 
     function deleteProductImage($imageId, $productId) {
         $fileName = ProductImage::find($imageId);
-        
-        if (File::exists('public/products/'.$fileName->name)){ 
-            unlink($fileName->path);
-             unlink($fileName->path_thumb);
-              unlink($fileName->path_medium);
-              File::Delete($fileName->path_thumb);
+        if (File::exists($fileName->path)) {
+            File::delete($fileName->path);
+            echo "found";
+        } else {
+            echo "not found";
+        }
+        return $fileName->path;
+
+
+        File::Delete($fileName->path_thumb);
         File::Delete($fileName->path_medium);
         ProductImage::find($imageId)->delete();
         Session::flash('danger', 'The produuct image was deleted successfully');
-        }else{
-            Session::flash('danger', 'The produuct image was NOT deleted');
-        }
         return redirect('admin/products/productImages/' . $productId);
     }
 
